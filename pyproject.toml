@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "mldevops-exercise"
+version = "0.1.0"
+description = "."
+authors = ["Jakub Skrzyński <relay.js.agh@poczta.cybercrate.pl>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+torch = "^2.0"
+torchvision = "^0.15"
+torchaudio = "^2.0"
+matplotlib = "^3.8"
+IPython = "^8.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0"  # Do testowania
+black = "^23.0"  # Do formatowania kodu
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
