@@ -77,6 +77,7 @@ plt.ylabel("Class")
 plt.tight_layout()
 print("Class labels:", bundle.get_labels())
 
+
 class GreedyCTCDecoder(torch.nn.Module):
     def __init__(self, labels, blank=0):
         super().__init__()
@@ -95,6 +96,7 @@ class GreedyCTCDecoder(torch.nn.Module):
         indices = torch.unique_consecutive(indices, dim=-1)
         indices = [i for i in indices if i != self.blank]
         return "".join([self.labels[i] for i in indices])
+
 
 decoder = GreedyCTCDecoder(labels=bundle.get_labels())
 transcript = decoder(emission[0])
@@ -117,63 +119,63 @@ ResampledWaveform = torch.Tensor
 AudioFeatures = torch.Tensor
 EmmisionsTensor = torch.Tensor
 
-class TranscriptGenerator():
 
+class TranscriptGenerator:
 
-  def __init__(self):
-    torch.random.manual_seed(0)
-    self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    self.bundle = torchaudio.pipelines.WAV2VEC2_ASR_BASE_960H
-    self.sample_rate = self.bundle.sample_rate
-    self.labels = self.bundle.get_labels()
-    self.model = self.bundle.get_model().to(self.device)
+    def __init__(self):
+        torch.random.manual_seed(0)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.bundle = torchaudio.pipelines.WAV2VEC2_ASR_BASE_960H
+        self.sample_rate = self.bundle.sample_rate
+        self.labels = self.bundle.get_labels()
+        self.model = self.bundle.get_model().to(self.device)
 
-  def display_audio_file_ipy(self, path_to_file):
-    IPython.display.Audio(path_to_file)
+    def display_audio_file_ipy(self, path_to_file):
+        IPython.display.Audio(path_to_file)
 
-  def correct_sampling(self, path_to_file: str) -> ResampledWaveform:
-    waveform, sample_rate = torchaudio.load(path_to_file)
-    waveform = waveform.to(self.device)
+    def correct_sampling(self, path_to_file: str) -> ResampledWaveform:
+        waveform, sample_rate = torchaudio.load(path_to_file)
+        waveform = waveform.to(self.device)
 
-    if sample_rate != self.sample_rate:
-      waveform = torchaudio.functional.resample(waveform,sample_rate,self.sample_rate)
+        if sample_rate != self.sample_rate:
+            waveform = torchaudio.functional.resample(waveform, sample_rate, self.sample_rate)
 
-    return waveform
+        return waveform
 
-  def extract_features(self, waveform: ResampledWaveform)->AudioFeatures:
-    with torch.inference_mode():
-      features,_ = self.model.extract_features(waveform)
-    return features
+    def extract_features(self, waveform: ResampledWaveform) -> AudioFeatures:
+        with torch.inference_mode():
+            features, _ = self.model.extract_features(waveform)
+        return features
 
-  def visualise_features(self, features:AudioFeatures)->None:
-    fig, ax = plt.subplots(len(features), 1, figsize=(16, 4.3 * len(features)))
-    for i, feats in enumerate(features):
-        ax[i].imshow(feats[0].cpu(), interpolation="nearest")
-        ax[i].set_title(f"Feature from transformer layer {i+1}")
-        ax[i].set_xlabel("Feature dimension")
-        ax[i].set_ylabel("Frame (time-axis)")
-    fig.tight_layout()
+    def visualise_features(self, features: AudioFeatures) -> None:
+        fig, ax = plt.subplots(len(features), 1, figsize=(16, 4.3 * len(features)))
+        for i, feats in enumerate(features):
+            ax[i].imshow(feats[0].cpu(), interpolation="nearest")
+            ax[i].set_title(f"Feature from transformer layer {i+1}")
+            ax[i].set_xlabel("Feature dimension")
+            ax[i].set_ylabel("Frame (time-axis)")
+        fig.tight_layout()
 
+    def classification(self, waveform: ResampledWaveform) -> EmmisionsTensor:
+        with torch.inference_mode():
+            emmision, _ = self.model(waveform)
 
-  def classification(self, waveform: ResampledWaveform)->EmmisionsTensor:
-    with torch.inference_mode():
-      emmision, _ = self.model(waveform)
+    def visualise_emmisions(self, emmisions: EmmisionsTensor) -> None:
+        plt.imshow(emission[0].cpu().T, interpolation="nearest")
+        plt.title("Classification result")
+        plt.xlabel("Frame (time-axis)")
+        plt.ylabel("Class")
+        plt.tight_layout()
+        print("Class labels:", self.labels)
 
-  def visualise_emmisions(self, emmisions: EmmisionsTensor)->None:
-    plt.imshow(emission[0].cpu().T, interpolation="nearest")
-    plt.title("Classification result")
-    plt.xlabel("Frame (time-axis)")
-    plt.ylabel("Class")
-    plt.tight_layout()
-    print("Class labels:", self.labels)
+    def pipeline(self, file_path):
+        self.display_audio_file_ipy(file_path)
+        corrected = self.correct_sampling(file_path)
+        features = self.extract_features(corrected)
+        self.visualise_features(features)
+        emmisions = self.classification(corrected)
+        self.visualise_emmisions(emmisions)
 
-  def pipeline(self, file_path):
-    self.display_audio_file_ipy(file_path)
-    corrected = self.correct_sampling(file_path)
-    features = self.extract_features(corrected)
-    self.visualise_features(features)
-    emmisions = self.classification(corrected)
-    self.visualise_emmisions(emmisions)
 
 tg = TranscriptGenerator()
 
